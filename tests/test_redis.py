@@ -16,45 +16,38 @@ class TestRedisSession:
                 return True
         return False
 
-    def test_redis_default(self, app):
-        app.config['SESSION_TYPE'] = 'redis'
-        flask_session.Session(app)
+    def test_redis_default(self, app_utils):
+        app = app_utils.create_app({
+            'SESSION_TYPE': 'redis'
+        })
 
         # Should be using Redis class
         with app.test_request_context():
             isinstance(flask.session, flask_session.sessions.RedisSession)
 
-        client = app.test_client()
-        assert client.post('/set', data={'value': '42'}).data == b'value set'
-        assert client.get('/get').data ==  b'42'
-        client.post('/delete')
+        app_utils.test_session_set(app)
 
         # There should be a session:<UUID> object
         assert self._has_redis_prefix(b'session:')
 
-    def test_redis_key_prefix(self, app):
-        #app = self._create_app()
-        app.config['SESSION_TYPE'] = 'redis'
-        app.config['SESSION_KEY_PREFIX'] = 'sess-prefix:'
-        flask_session.Session(app)
-
-        client = app.test_client()
-        assert client.post('/set', data={'value': 'test2'}).data == b'value set'
-        assert client.get('/get').data ==  b'test2'
+    def test_redis_key_prefix(self, app_utils):
+        app = app_utils.create_app({
+            'SESSION_TYPE': 'redis',
+            'SESSION_KEY_PREFIX': 'sess-prefix:'
+        })
+        app_utils.test_session_set(app)
 
         # There should be a key in Redis that starts with the prefix set
         assert not self._has_redis_prefix(b'session:')
         assert self._has_redis_prefix(b'sess-prefix:')
 
-    def test_redis_with_signer(self, app):
-        app.config['SESSION_TYPE'] = 'redis'
-        app.config['SESSION_USE_SIGNER'] = True
+    def test_redis_with_signer(self, app_utils):
+        app = app_utils.create_app({
+            'SESSION_TYPE': 'redis',
+            'SESSION_USE_SIGNER': True,
+        })
         app.secret_key = 'test_key'
-        flask_session.Session(app)
-
-        client = app.test_client()
-        assert client.post('/set', data={'value': 'test'}).data == b'value set'
-        assert client.get('/get').data ==  b'test'
+        app_utils.test_session_set(app)
 
         # There should be a key in Redis that starts with the prefix set
         assert self._has_redis_prefix(b'session:')

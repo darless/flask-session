@@ -7,16 +7,13 @@ class TestFileSystem:
     def setup_method(self, _):
         pass
 
-    def test_basic(self, app):
-        app.config['SESSION_TYPE'] = 'filesystem'
-        app.config['SESSION_FILE_DIR'] = tempfile.gettempdir()
-        flask_session.Session(app)
+    def test_basic(self, app_utils):
+        app = app_utils.create_app({
+            'SESSION_TYPE': 'filesystem',
+            'SESSION_FILE_DIR': tempfile.gettempdir()
+        })
+        app_utils.test_session_set(app)
 
         # Should be using Redis class
         with app.test_request_context():
             isinstance(flask.session, flask_session.sessions.FileSystemSession)
-
-        client = app.test_client()
-        assert client.post('/set', data={'value': '42'}).data == b'value set'
-        assert client.get('/get').data ==  b'42'
-        client.post('/delete')
